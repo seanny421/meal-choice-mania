@@ -10,6 +10,10 @@ that they can vote on "What to have for dinner?", "What to have for lunch?" etc
 Fun minigames as deciders??? (Snake, tetris, pictionary??? etc?)
 
 
+Helpful Resources
+https://stackoverflow.com/questions/17371639/how-to-store-arrays-in-mysql
+
+
 
 
 

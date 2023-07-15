@@ -58,13 +58,11 @@ public class DataBaseConnection {
 	
 	public User searchUsers(String email, String password) {
 		String sql = "SELECT id, username, email FROM User WHERE email='"+email+"' AND password='" + password + "'";
-		System.out.println(sql);
 		try {
 			Statement statement = connection.createStatement();
 			ResultSet result = statement.executeQuery(sql);
 			result.next();
 			User new_user = new User(result.getInt("id"), result.getString("username"), result.getString("email"));
-			System.out.println(new_user.getEmail());
 			return new_user;
 
 		} catch (SQLException e) {
@@ -97,13 +95,11 @@ public class DataBaseConnection {
 		String getId = "SELECT * FROM Room WHERE room_creator="+room_creator+" AND name='"+room_name+"'";
 		boolean room_created = executeInsertQuery(sql);
 		if(room_created) {
-			System.out.println(getId);
 			Statement statement;
 			try {
 				statement = connection.createStatement();
 				ResultSet results = statement.executeQuery(getId);
 				results.next();
-				System.out.println("RESULT: " + results.getInt("id"));
 				return results.getInt("id");
 			} catch (SQLException e) {
 				// TODO Auto-generated catch block
@@ -118,7 +114,9 @@ public class DataBaseConnection {
 	public boolean joinRoom(int joiner_id, int room_id, int room_creator) {
 		String sql = "INSERT INTO RoomUserPairing values("+joiner_id+","+room_id+ "," + room_creator+")";
 		System.out.println(sql);
-		return executeInsertQuery(sql);
+		boolean returns = executeInsertQuery(sql);
+		System.out.println(returns);
+		return returns;
 	}
 	
 	

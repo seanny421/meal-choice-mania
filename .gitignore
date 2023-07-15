@@ -1,4 +1,6 @@
+.gitignore
 Password.java
+.DS_Store
 *.jpg
 *.png
 *.jpeg

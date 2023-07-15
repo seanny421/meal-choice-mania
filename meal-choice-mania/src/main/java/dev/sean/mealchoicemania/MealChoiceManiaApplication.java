@@ -82,7 +82,6 @@ public class MealChoiceManiaApplication {
 		int user_id = request_object.getInt("user_id");
 		int room_id = request_object.getInt("room_id");
 		int room_creator = request_object.getInt("room_creator");
-		System.out.println(user_id + " joined the room " + room_id);
 		return db_connection.joinRoom(user_id, room_id, room_creator);
 	}
 

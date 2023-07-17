@@ -2,6 +2,7 @@ package dev.sean.mealchoicemania;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -34,6 +35,7 @@ public class DataBaseConnection {
 		return con;
 	}
 	
+	//don't need to sanitise this, probably shouldn't even have this
 	public ArrayList<User> getUsers() throws SQLException{
 		ArrayList<User> response = new ArrayList<>();//list of users to respond with
 		String query = "SELECT * FROM User";
@@ -47,22 +49,36 @@ public class DataBaseConnection {
 		return response;
 	}
 
-	//should we return user here?
+	//sanitised - should we return user?
 	public boolean addUser(String username, String email, String password){
-		String sql = "INSERT INTO User(username, email, password) values("
-				+ "'"+username+"','"+email+"','"+password+"'"
-				+ ")";
+		if(username == "" || email == "" || password == "") {return false;}//check for null values first
+		String query = "INSERT INTO User (username, email, password) values (?, ?, ?)";
+		try {
+			PreparedStatement statement = connection.prepareStatement(query);
+			statement.setString(1, username);
+			statement.setString(2, email);
+			statement.setString(3, password);
+			int row = statement.executeUpdate();
+			
+			System.out.println(row);
+			return true;
+		} catch(SQLException e) {
+			System.out.println(e);
+			return false;
+		}
 
-		return executeInsertQuery(sql);
 	}
 	
+	//sanitised
 	public User searchUsers(String email, String password) {
-		String sql = "SELECT id, username, email FROM User WHERE email='"+email+"' AND password='" + password + "'";
+		String sql = "SELECT id, username, email FROM User WHERE email=? AND password=?";
 		try {
-			Statement statement = connection.createStatement();
-			ResultSet result = statement.executeQuery(sql);
+			PreparedStatement statement = connection.prepareStatement(sql);
+			statement.setString(1,  email);
+			statement.setString(2,  password);
+			ResultSet result = statement.executeQuery();
 			result.next();
-			User new_user = new User(result.getInt("id"), result.getString("username"), result.getString("email"));
+			User new_user = new User(result.getInt("id"), result.getString("email"), result.getString("username"));
 			return new_user;
 
 		} catch (SQLException e) {
@@ -72,53 +88,50 @@ public class DataBaseConnection {
 		}
 	}
 	
-	//executes any basic insert query into the db
-	//returns boolean if successful
-	public boolean executeInsertQuery(String query) {
-		Statement statement;
+	//sanitised
+	//returns id of the room created or -1 if error
+	//TODO - is it possible for first query to execute and 2nd to fail???
+	public int createRoom(String room_name, int room_creator) {
+		String sql = "INSERT INTO Room (name, room_creator) values (?, ?)";
+		String getId = "SELECT * FROM Room WHERE room_creator=? AND name=?";
 		try {
-			statement = connection.createStatement();
-			statement.executeUpdate(query);
+			PreparedStatement statement = connection.prepareStatement(sql);
+			statement.setString(1, room_name);
+			statement.setInt(2, room_creator);
+			int row = statement.executeUpdate();
+			if(row == 1){
+				statement = connection.prepareStatement(getId);
+				statement.setInt(1, room_creator);
+				statement.setString(2, room_name);
+				ResultSet results = statement.executeQuery();
+				if(results.next()) {
+					return results.getInt("id");
+				}
+			}
+			return -1;
+		} catch(SQLException e) {
+			System.out.println(e);
+			return -1;
+		}
+	}
+
+	//sanitised
+	//creates new col in RoomUserPairing table
+	public boolean joinRoom(int joiner_id, int room_id, int room_creator) {
+		String sql = "INSERT INTO RoomUserPairing (userid, roomid, room_creator) values (?, ?, ?)";
+		try {
+			PreparedStatement statement = connection.prepareStatement(sql);
+			statement.setInt(1, joiner_id);
+			statement.setInt(2, room_id);
+			statement.setInt(3, room_creator);
+			int row = statement.executeUpdate();
+			if(row == 0) {return false;}
 			return true;
-		} catch (SQLException e) {
-			System.out.println("Something went wrong " + e);
-			// TODO Auto-generated catch block
+			
+		} catch(SQLException e) {
+			System.out.println(e);
 			return false;
 		}
 	}
-	
-	//returns id of the room created
-	//returns -1 if error
-	//TODO - is it possible for first query to execute and 2nd to fail???
-	public int createRoom(String room_name, int room_creator) {
-		String sql = "INSERT INTO Room (name, room_creator) values('" + room_name + "', '"+room_creator+"')";
-		String getId = "SELECT * FROM Room WHERE room_creator="+room_creator+" AND name='"+room_name+"'";
-		boolean room_created = executeInsertQuery(sql);
-		if(room_created) {
-			Statement statement;
-			try {
-				statement = connection.createStatement();
-				ResultSet results = statement.executeQuery(getId);
-				results.next();
-				return results.getInt("id");
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				return -1;
-			}
-		}
-		return -1;
-	}
-
-	//creates new col in RoomUserPairing table
-	public boolean joinRoom(int joiner_id, int room_id, int room_creator) {
-		String sql = "INSERT INTO RoomUserPairing values("+joiner_id+","+room_id+ "," + room_creator+")";
-		System.out.println(sql);
-		boolean returns = executeInsertQuery(sql);
-		System.out.println(returns);
-		return returns;
-	}
-	
-	
 
 }

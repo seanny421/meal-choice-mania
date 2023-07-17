@@ -85,4 +85,21 @@ public class MealChoiceManiaApplication {
 		return db_connection.joinRoom(user_id, room_id, room_creator);
 	}
 
+	@PostMapping(path="room/delete", consumes= {MediaType.APPLICATION_JSON_VALUE})
+	public boolean deleteRoom(@RequestBody String request) {
+		JSONObject request_object = new JSONObject(request);
+		int room_id = request_object.getInt("room_id");
+		//int password = request_object.getInt("password"); - could we use password, lookup room id, get the room_creator and then check passwords against eachother
+		return db_connection.deleteRoom(room_id);
+	}
+	@PostMapping(path="room/leave", consumes= {MediaType.APPLICATION_JSON_VALUE})
+	public boolean leaveRoom(@RequestBody String request) {
+		JSONObject request_object = new JSONObject(request);
+		int user_id = request_object.getInt("user_id");
+		int room_id = request_object.getInt("room_id");
+		//int password = request_object.getInt("password"); - could we use password, lookup room id, get the room_creator and then check passwords against eachother
+		return db_connection.leaveRoom(user_id, room_id);
+	}
+
+
 }

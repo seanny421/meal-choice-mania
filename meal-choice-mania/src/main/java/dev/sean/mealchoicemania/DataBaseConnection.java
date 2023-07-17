@@ -133,5 +133,36 @@ public class DataBaseConnection {
 			return false;
 		}
 	}
+	
+	//sanitised
+	public boolean deleteRoom(int room_id) {
+		String sql = "DELETE FROM Room WHERE id = ?";
+		try {
+			PreparedStatement statement = connection.prepareStatement(sql);
+			statement.setInt(1, room_id);
+			int row = statement.executeUpdate();
+			if(row == 0) {return false;}
+			return true;
+		} catch(SQLException e) {
+			System.out.println(e);
+			return false;
+		}
+	}
+	
+	public boolean leaveRoom(int user_id_leaving, int room_id) {
+		String sql = "DELETE FROM RoomUserPairing WHERE roomid=? AND userid=?";
+		try {
+			PreparedStatement statement = connection.prepareStatement(sql);
+			statement.setInt(1, room_id);
+			statement.setInt(2, user_id_leaving);
+			int row = statement.executeUpdate();
+			if(row == 0) {return false;}
+			return true;
+		} catch(SQLException e) {
+			System.out.println(e);
+			return false;
+		}
+		
+	}
 
 }

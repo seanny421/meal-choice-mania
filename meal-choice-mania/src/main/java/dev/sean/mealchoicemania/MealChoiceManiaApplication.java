@@ -1,6 +1,7 @@
 package dev.sean.mealchoicemania;
 
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 import org.json.JSONObject;
@@ -100,6 +101,41 @@ public class MealChoiceManiaApplication {
 		//int password = request_object.getInt("password"); - could we use password, lookup room id, get the room_creator and then check passwords against eachother
 		return db_connection.leaveRoom(user_id, room_id);
 	}
+	@PostMapping(path="poll/create", consumes= {MediaType.APPLICATION_JSON_VALUE})
+	public boolean createPoll(@RequestBody String request) {
+		JSONObject request_object = new JSONObject(request);
+		String name = request_object.getString("name");
+		int room_id = request_object.getInt("room_id");
+		int poll_creator = request_object.getInt("poll_creator");
+		String expire_date = request_object.getString("expire_date");//TODO - we convert back to string later (is this needed? Good for format check maybe?)
+		LocalDateTime e = LocalDateTime.parse(expire_date);
+		return db_connection.createPoll(name, room_id, poll_creator, e);
+	}
+
+	@PostMapping(path="polloption/create", consumes= {MediaType.APPLICATION_JSON_VALUE})
+	public boolean createPollOptions(@RequestBody String request) {
+		JSONObject request_object = new JSONObject(request);
+		int poll_id = request_object.getInt("poll_id");
+		String text = request_object.getString("text");
+		return db_connection.createPollOptions(poll_id, text);
+	}
+	@PostMapping(path="polloption/vote", consumes= {MediaType.APPLICATION_JSON_VALUE})
+	public boolean addVote(@RequestBody String request) {
+		JSONObject request_object = new JSONObject(request);
+		int polloption_id = request_object.getInt("polloption_id");
+		int poll_id = request_object.getInt("poll_id");
+		int user_id = request_object.getInt("user_id");
+		return db_connection.vote(polloption_id, poll_id, user_id);
+	}
+	@PostMapping(path="poll/getvote", consumes= {MediaType.APPLICATION_JSON_VALUE})
+	public int getUserVote(@RequestBody String request) {
+		JSONObject request_object = new JSONObject(request);
+		int user_id = request_object.getInt("user_id");
+		int poll_id = request_object.getInt("poll_id");
+		return db_connection.getUserVote(user_id, poll_id);
+	}
+
+	
 
 
 }

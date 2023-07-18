@@ -140,6 +140,25 @@ public class MealChoiceManiaApplication {
 		return db_connection.getVotes(poll_id,polloption_id);
 	}
 
+	@PostMapping(path="poll/changevote", consumes= {MediaType.APPLICATION_JSON_VALUE})
+	public boolean changeVote(@RequestBody String request) {
+		JSONObject request_object = new JSONObject(request);
+		int user_id = request_object.getInt("user_id");
+		int poll_id = request_object.getInt("poll_id");
+		int polloption_id = request_object.getInt("polloption_id");
+		return db_connection.changeVote(user_id, poll_id, polloption_id);
+	}
+	@GetMapping("/poll/options")
+	public ArrayList<PollOption> getPollOptions(@RequestParam(required=true) int pollid){
+		return db_connection.getPollOptions(pollid);
+	}
+	
+	
+	@GetMapping("/delete")
+	public boolean deleteEverything() {
+		return db_connection.deleteEverything();
+	}
+
 
 	
 

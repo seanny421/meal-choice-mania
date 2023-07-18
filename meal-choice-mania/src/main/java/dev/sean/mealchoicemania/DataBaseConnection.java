@@ -87,23 +87,34 @@ public class DataBaseConnection {
 	}
 	
 	
-	//sanitised
-	public User searchUsers(String email, String password) {
-		String sql = "SELECT id, username, email FROM User WHERE email=? AND password=?";
+	public User login(String email, String password) {
+		String sql = "SELECT * FROM User WHERE email=?";
+		Base64.Encoder enc = Base64.getEncoder();
+		Base64.Decoder dec = Base64.getDecoder();
 		try {
 			PreparedStatement statement = connection.prepareStatement(sql);
-			statement.setString(1,  email);
-			statement.setString(2,  password);
+			statement.setString(1, email);
 			ResultSet result = statement.executeQuery();
 			result.next();
-			User new_user = new User(result.getInt("id"), result.getString("email"), result.getString("username"));
-			return new_user;
+			String salt = result.getString("salt");
+			String result_password = result.getString("password");
 
-		} catch (SQLException e) {
+
+			PBEKeySpec spec = new PBEKeySpec("password".toCharArray(), dec.decode(salt), 65536, 128);
+			SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+			byte[] hash = factory.generateSecret(spec).getEncoded();
+			String hashed_password = enc.encodeToString(hash);
+			//if hash matches
+			if(result_password.equals(hashed_password)){
+				User new_user = new User(result.getInt("id"), result.getString("email"), result.getString("username"));
+				return new_user;
+			}
+		} catch (SQLException | InvalidKeySpecException | NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return null;
 		}
+		return null;
+		
 	}
 	
 	//sanitised

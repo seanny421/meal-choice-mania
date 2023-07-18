@@ -63,7 +63,7 @@ public class MealChoiceManiaApplication {
 	@PostMapping(path = "users/get", consumes= {MediaType.APPLICATION_JSON_VALUE})
 	public User searchUsers(@RequestBody String request) {//should be email and password
 		JSONObject request_object = new JSONObject(request);
-		return db_connection.searchUsers(request_object.getString("email"), request_object.getString("password"));
+		return db_connection.login(request_object.getString("email"), request_object.getString("password"));
 	}
 	
 	//we need a room name and a creator

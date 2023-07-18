@@ -193,26 +193,27 @@ public class DataBaseConnection {
 			System.out.println(e);
 			return false;
 		}
-		String updateQuery = "UPDATE PollOption SET votes = votes + 1 WHERE id=?";
 		String insertVote = "INSERT INTO UserPollPairing (userid, pollid, polloptionid) values (?, ?, ?)";
-		//check against duplicate votes
-		if(insertQuery(insertVote, new ArrayList<>(Arrays.asList(user_id, pollid, polloption_id)))) {
-			try {//increment votes
-				PreparedStatement statement = connection.prepareStatement(updateQuery);
-				statement.setInt(1, polloption_id);
-				int row = statement.executeUpdate();
-				if(row == 0) {return false;}
-				return true;
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				System.out.println(e.toString());
-				System.out.println("LINE 167");
-				//check for differing vote and change if needed;
-
-				return false;
-			}
+		return (insertQuery(insertVote, new ArrayList<>(Arrays.asList(user_id, pollid, polloption_id))));
+	}
+	
+	public int getVotes(int poll_id, int polloption_id) {
+		String query = "SELECT COUNT(*) FROM UserPollPairing WHERE pollid=? AND polloptionid=?";
+		try {
+			PreparedStatement statement = connection.prepareStatement(query);
+			statement.setInt(1, poll_id);
+			statement.setInt(2, polloption_id);
+			ResultSet result = statement.executeQuery();
+			result.next();
+			int count = result.getInt("COUNT(*)");
+			return count;
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return -1;
 		}
-		return false;
+
+		
 	}
 	
 	//update userpollpairing and polloption tables

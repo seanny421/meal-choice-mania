@@ -134,6 +134,12 @@ public class MealChoiceManiaApplication {
 		int poll_id = request_object.getInt("poll_id");
 		return db_connection.getUserVote(user_id, poll_id);
 	}
+	//get or post request????
+	@GetMapping("/poll/count")
+	public int getVotes(@RequestParam(required=true) int poll_id, int polloption_id) {
+		return db_connection.getVotes(poll_id,polloption_id);
+	}
+
 
 	
 

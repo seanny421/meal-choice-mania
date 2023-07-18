@@ -1,5 +1,7 @@
 package dev.sean.mealchoicemania;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -9,8 +11,13 @@ import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Random;
+
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 public class DataBaseConnection {
 	Connection connection;
@@ -52,13 +59,33 @@ public class DataBaseConnection {
 		}
 		return response;
 	}
-
+	
 	//sanitised - should we return user?
 	public boolean addUser(String username, String email, String password){
-//		if(username == "" || email == "" || password == "") {return false;}//check for null values first
-		String query = "INSERT INTO User (username, email, password) values (?, ?, ?)";
-		return insertQuery(query, new ArrayList<>(Arrays.asList(username, email, password)));
+		Random r = new Random();
+		byte[] salt = new byte[16];
+		r.nextBytes(salt);
+		PBEKeySpec spec = new PBEKeySpec("password".toCharArray(), salt, 65536, 128);
+		try {
+			SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1");
+			byte[] hash = factory.generateSecret(spec).getEncoded();
+			Base64.Encoder enc = Base64.getEncoder();
+			System.out.printf("salt: %s%n", enc.encodeToString(salt));
+			System.out.printf("hash: %s%n", enc.encodeToString(hash));
+
+			String query = "INSERT INTO User (username, email, password, salt) values (?, ?, ?, ?)";
+			return insertQuery(query, new ArrayList<>(Arrays.asList(username, email, enc.encodeToString(hash), enc.encodeToString(salt))));
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		} catch (InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
 	}
+	
 	
 	//sanitised
 	public User searchUsers(String email, String password) {
@@ -128,6 +155,7 @@ public class DataBaseConnection {
 		}
 	}
 	
+	//sanitised
 	public boolean leaveRoom(int user_id_leaving, int room_id) {
 		String sql = "DELETE FROM RoomUserPairing WHERE roomid=? AND userid=?";
 		try {
@@ -171,7 +199,6 @@ public class DataBaseConnection {
 			e.printStackTrace();
 			return -1;
 		}
-
 	}
 	
 	public boolean vote(int polloption_id, int pollid, int user_id ) {
@@ -194,7 +221,10 @@ public class DataBaseConnection {
 			return false;
 		}
 		String insertVote = "INSERT INTO UserPollPairing (userid, pollid, polloptionid) values (?, ?, ?)";
-		return (insertQuery(insertVote, new ArrayList<>(Arrays.asList(user_id, pollid, polloption_id))));
+		if(!insertQuery(insertVote, new ArrayList<>(Arrays.asList(user_id, pollid, polloption_id)))) {
+			return changeVote(user_id, pollid, polloption_id);
+		}
+		return true;
 	}
 	
 	public int getVotes(int poll_id, int polloption_id) {
@@ -216,20 +246,46 @@ public class DataBaseConnection {
 		
 	}
 	
-	//update userpollpairing and polloption tables
+	//update userpollpairing tables
 	public boolean changeVote(int user_id, int poll_id, int polloption_id) {
 		String sql = "UPDATE UserPollPairing SET polloptionid=? WHERE userid=? AND pollid=?";
-		return false;
-//		return insertQuery(sql, new ArrayList<>(Arrays.asList(polloption_id, user_id, poll_id)));
-//		try {
-//			PreparedStatement statement = connection.prepareStatement(sql);
-//			int	row = statement.executeUpdate();
-//		} catch (SQLException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		return false;
-		
+		try {
+			PreparedStatement statement = connection.prepareStatement(sql);
+			statement.setInt(1, polloption_id);
+			statement.setInt(2, user_id);
+			statement.setInt(3, poll_id);
+			int row = statement.executeUpdate();
+			if(row == 0) {return false;}
+			return true;
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			System.out.println(e);
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
+	public ArrayList<PollOption> getPollOptions(int pollid) {
+		String sql = "SELECT * FROM PollOption WHERE pollid=?";
+		ArrayList<PollOption> options = new ArrayList<>();
+		try {
+			PreparedStatement statement = connection.prepareStatement(sql);
+			statement.setInt(1, pollid);
+			ResultSet result = statement.executeQuery();
+			while(result.next()) {
+				int id = result.getInt("id");
+				int poll_id = result.getInt("pollid");//make sure not to conflate param (poll_id != param.pollid)
+				String option_text = result.getString("text");
+				PollOption o = new PollOption(id, poll_id, option_text);
+				options.add(o);
+			}
+			return options;
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
 	}
 	
 	
@@ -254,6 +310,59 @@ public class DataBaseConnection {
 		} catch(SQLException e) {
 			System.out.println("LINE 214");
 			System.out.println(e);
+			return false;
+		}
+	}
+	//TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+	//please delete this function before production
+	public boolean deleteEverything() {
+		String userpollpairing = "DELETE FROM userpollpairing";
+		String polloption = "DELETE FROM PollOption";
+		String poll = "DELETE FROM Poll";
+		String roomuserpairing = "DELETE FROM RoomUserPairing";
+		String room = "DELTE FROM Room";
+		String user = "DELTE FROM user";
+		try {
+			Statement s = connection.createStatement();
+			int rows = s.executeUpdate(userpollpairing);
+			if(rows == 0) {
+				System.out.println("userpollpairing failed");
+			}
+			else {System.out.println("userpollpairing success");}
+			rows = s.executeUpdate(polloption);
+			if(rows == 0) {
+				System.out.println("polloption failed");
+			}
+			else {System.out.println("polloption success");}
+
+			rows = s.executeUpdate(poll);
+			if(rows == 0) {
+				System.out.println("poll failed");
+			}
+			else {System.out.println("poll success");}
+			
+			rows = s.executeUpdate(roomuserpairing);
+			if(rows == 0) {
+				System.out.println("roomuserpairing failed");
+			}
+			else {System.out.println("roomuserpairing success");}
+
+			rows = s.executeUpdate(room);
+			if(rows == 0) {
+				System.out.println("room failed");
+			}
+			else {System.out.println("room success");}
+
+			rows = s.executeUpdate(user);
+			if(rows == 0) {
+				System.out.println("user failed");
+			}
+			else {System.out.println("user success");}
+			return true;
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 			return false;
 		}
 	}
